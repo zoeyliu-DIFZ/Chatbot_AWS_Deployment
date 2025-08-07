@@ -1,0 +1,61 @@
+# AI Chat Assistant Deployment Configuration
+name: ai-chat-assistant
+description: AI Chat Assistant with Claude 3.5 Sonnet - SAM Deployment
+
+# Default deployment settings
+default:
+  region: us-east-1
+  runtime: python3.9
+  timeout: 30
+  memory_size: 512
+  
+# Environment-specific configurations
+environments:
+  dev:
+    stack_name: ai-chat-assistant-dev
+    environment: dev
+    claude_model: anthropic.claude-3-5-sonnet-20240620-v1:0
+    
+  staging:
+    stack_name: ai-chat-assistant-staging
+    environment: staging
+    claude_model: anthropic.claude-3-5-sonnet-20240620-v1:0
+    
+  prod:
+    stack_name: ai-chat-assistant-prod
+    environment: prod
+    claude_model: anthropic.claude-3-5-sonnet-20240620-v1:0
+
+# Build configuration
+build:
+  use_container: false
+  cached: true
+  parallel: true
+
+# Deployment configuration
+deploy:
+  capabilities:
+    - CAPABILITY_IAM
+  confirm_changeset: true
+  resolve_s3: true
+  fail_on_empty_changeset: false
+
+# Resources configuration
+resources:
+  lambda:
+    src_path: src/
+    handler: lambda_function.lambda_handler
+    
+  frontend_updater:
+    src_path: update-frontend/
+    handler: index.handler
+    
+  s3:
+    public_read: true
+    website_enabled: true
+    
+  api:
+    cors_enabled: true
+    cors_origins: "*"
+    cors_headers: "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token"
+    cors_methods: "GET,POST,OPTIONS" 

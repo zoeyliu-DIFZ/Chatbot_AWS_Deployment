@@ -1,0 +1,131 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AI Chat Assistant with Claude 3.5 Sonnet - Full Stack Deployment
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Environment name
+  
+  ClaudeModelId:
+    Type: String
+    Default: anthropic.claude-3-5-sonnet-20240620-v1:0
+    Description: Claude model ID for Bedrock
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: python3.9
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        CLAUDE_MODEL_ID: !Ref ClaudeModelId
+
+Resources:
+  # API Gateway
+  ChatApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub ai-chat-api-${Environment}
+      StageName: !Ref Environment
+      Cors:
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+
+  # Lambda Function
+  ChatFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ai-chat-assistant-${Environment}
+      CodeUri: src/
+      Handler: lambda_function.lambda_handler
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - bedrock:InvokeModelWithResponseStream
+              Resource: !Sub 'arn:aws:bedrock:us-east-1::foundation-model/${ClaudeModelId}'
+      Events:
+        ChatApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChatApi
+            Path: /chat
+            Method: post
+
+  # S3 Bucket for Frontend
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-frontend
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  # S3 Bucket Policy for Public Read Access
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub '${FrontendBucket.Arn}/*'
+
+  # Custom Resource to Update Frontend with API Endpoint
+  UpdateFrontendFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub update-frontend-${Environment}
+      CodeUri: update-frontend/
+      Handler: index.handler
+      Runtime: python3.9
+      Timeout: 60
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref FrontendBucket
+
+  UpdateFrontend:
+    Type: AWS::CloudFormation::CustomResource
+    DependsOn: 
+      - FrontendBucket
+      - ChatApi
+    Properties:
+      ServiceToken: !GetAtt UpdateFrontendFunction.Arn
+      ApiEndpoint: !Sub 'https://${ChatApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/chat'
+      BucketName: !Ref FrontendBucket
+      Environment: !Ref Environment
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL for Chat function
+    Value: !Sub 'https://${ChatApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/chat'
+    Export:
+      Name: !Sub ${AWS::StackName}-ApiEndpoint
+
+  WebsiteURL:
+    Description: Frontend website URL
+    Value: !Sub 'http://${FrontendBucket}.s3-website-${AWS::Region}.amazonaws.com'
+    Export:
+      Name: !Sub ${AWS::StackName}-WebsiteURL
+
+  FrontendBucket:
+    Description: S3 bucket name for frontend
+    Value: !Ref FrontendBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-FrontendBucket 

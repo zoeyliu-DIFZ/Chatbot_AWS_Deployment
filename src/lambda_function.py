@@ -55,15 +55,18 @@ def lambda_handler(event, context):
         # Get chat history (optional)
         chat_history = body.get('chat_history', [])
         
-        # Get agent and process message using LangGraph workflow
+        # Get agent and process message using LangGraph workflow with path tracking
         chat_agent = get_agent()
-        response = chat_agent.query(user_message, chat_history)
+        response, workflow_info = chat_agent.query_with_path(user_message, chat_history)
         
         return {
             'statusCode': 200,
             'headers': headers,
             'body': json.dumps({
                 'response': response,
+                'workflow_path': workflow_info.get('path', []),
+                'intent_type': workflow_info.get('intent_type'),
+                'final_agent': workflow_info.get('final_agent'),
                 'message': user_message
             })
         }

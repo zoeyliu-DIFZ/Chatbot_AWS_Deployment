@@ -5,7 +5,7 @@ description: AI Chat Assistant with Claude 3.5 Sonnet - SAM Deployment
 # Default deployment settings
 default:
   region: us-east-1
-  runtime: python3.9
+  runtime: python3.12
   timeout: 30
   memory_size: 512
   

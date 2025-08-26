@@ -14,7 +14,7 @@ def get_agent():
     return agent
 
 def lambda_handler(event, context):
-    """Lambda function handler for chat API"""
+    """Lambda function handler for chat API using LangGraph workflow"""
     
     # Set CORS headers
     headers = {
@@ -55,7 +55,7 @@ def lambda_handler(event, context):
         # Get chat history (optional)
         chat_history = body.get('chat_history', [])
         
-        # Get agent and process message
+        # Get agent and process message using LangGraph workflow
         chat_agent = get_agent()
         response = chat_agent.query(user_message, chat_history)
         

@@ -75,10 +75,10 @@ def handler(event, context):
                         # Update HTML with API endpoint
                         with open(local_path, 'r') as f:
                             html_content = f.read()
-                        # Only replace the API_ENDPOINT declaration, not the condition check
+                        # Replace the placeholder with actual API endpoint
                         updated_html = html_content.replace(
-                            "const API_ENDPOINT = 'YOUR_API_GATEWAY_URL_HERE';",
-                            f"const API_ENDPOINT = '{api_endpoint}';"
+                            "'YOUR_API_GATEWAY_URL_HERE'",
+                            f"'{api_endpoint}'"
                         )
                         
                         # Upload updated HTML

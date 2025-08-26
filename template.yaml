@@ -18,7 +18,7 @@ Globals:
   Function:
     Timeout: 30
     MemorySize: 512
-    Runtime: python3.9
+    Runtime: python3.12
     Environment:
       Variables:
         ENVIRONMENT: !Ref Environment
@@ -94,7 +94,7 @@ Resources:
       FunctionName: !Sub update-frontend-${Environment}
       CodeUri: update-frontend/
       Handler: index.handler
-      Runtime: python3.9
+      Runtime: python3.12
       Timeout: 60
       Policies:
         - S3CrudPolicy:

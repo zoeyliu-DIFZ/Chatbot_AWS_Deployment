@@ -2,9 +2,11 @@ import random
 import string
 import json
 import re
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
 import os
+import uuid
+from datetime import datetime
 
 load_dotenv()
 
@@ -143,3 +145,19 @@ def extract_response(result):
             else:
                 return result['output']  # AgentExecutor format
     return str(result)
+
+def format_agent_output(result):
+    """Format agent output consistently"""
+    if hasattr(result, 'output'):
+        return result.output
+    elif isinstance(result, dict):
+        if 'output' in result:
+            return result['output']  # AgentExecutor format
+        elif 'result' in result:
+            return result['result']  # LangGraph format
+        else:
+            return str(result)
+    elif hasattr(result, 'result'):
+        return result.result
+    else:
+        return str(result)

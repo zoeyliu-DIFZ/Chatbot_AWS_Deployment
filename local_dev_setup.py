@@ -16,7 +16,7 @@ class LocalDevEnvironment:
     def __init__(self):
         self.processes = []
         self.api_port = 5000
-        self.frontend_port = 8000
+        self.frontend_port = 8001
         
     def check_dependencies(self):
         """Check if dependencies are installed"""
@@ -57,15 +57,16 @@ class LocalDevEnvironment:
         """Start frontend server"""
         print(f"🌐 Starting frontend server on port {self.frontend_port}...")
         
-        frontend_dir = Path("frontend")
-        if not frontend_dir.exists():
-            print("❌ Frontend directory not found")
+        # Check if index_local.html exists (created by update_frontend_config)
+        index_file = Path("index_local.html")
+        if not index_file.exists():
+            print("❌ index_local.html not found. Please run update_frontend_config first.")
             return False
         
         try:
             process = subprocess.Popen([
                 sys.executable, "-m", "http.server", str(self.frontend_port)
-            ], cwd=frontend_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            ], cwd=".", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             self.processes.append(("Frontend Server", process))
             print(f"✅ Frontend server started (PID: {process.pid})")
             return True
@@ -75,10 +76,10 @@ class LocalDevEnvironment:
     
     def update_frontend_config(self):
         """Update frontend configuration to connect to local API"""
-        frontend_file = Path("frontend/index.html")
+        frontend_file = Path("update-frontend/frontend/index.html")
         
         if not frontend_file.exists():
-            print("❌ Frontend file not found")
+            print("❌ update-frontend/frontend/index.html not found")
             return False
         
         try:
@@ -91,12 +92,13 @@ class LocalDevEnvironment:
                     f"const API_ENDPOINT = 'http://localhost:{self.api_port}/chat';"
                 )
                 
-                # Create temporary file
-                temp_file = Path("frontend/index_local.html")
-                temp_file.write_text(content)
+                # Create local configuration file
+                local_file = Path("index_local.html")
+                local_file.write_text(content)
                 
                 print("✅ Created local frontend configuration")
-                print(f"   Frontend file: {temp_file}")
+                print(f"   Source: {frontend_file}")
+                print(f"   Local: {local_file}")
                 return True
             else:
                 print("⚠️  API endpoint already configured")
@@ -130,7 +132,7 @@ class LocalDevEnvironment:
         print("🌐 Opening browser...")
         
         # Use local frontend configuration if available
-        if Path("frontend/index_local.html").exists():
+        if Path("index_local.html").exists():
             url = f"http://localhost:{self.frontend_port}/index_local.html"
         else:
             url = f"http://localhost:{self.frontend_port}"
@@ -172,7 +174,7 @@ class LocalDevEnvironment:
                     process.kill()
         
         # Delete temporary file
-        temp_file = Path("frontend/index_local.html")
+        temp_file = Path("index_local.html")
         if temp_file.exists():
             temp_file.unlink()
             print("   Removed temporary frontend file")
@@ -189,15 +191,16 @@ class LocalDevEnvironment:
             return
         
         try:
+            # Update frontend configuration first
+            if not self.update_frontend_config():
+                return
+            
             # Start servers
             if not self.start_api_server():
                 return
             
             if not self.start_frontend_server():
                 return
-            
-            # Update frontend configuration
-            self.update_frontend_config()
             
             # Wait for servers to start
             self.wait_for_servers()

@@ -23,6 +23,8 @@ Globals:
       Variables:
         ENVIRONMENT: !Ref Environment
         CLAUDE_MODEL_ID: !Ref ClaudeModelId
+        SESSION_TABLE: !Sub ai-chat-session-${Environment}
+        HISTORY_TABLE: !Sub ai-chat-history-${Environment}
 
 Resources:
   # API Gateway
@@ -51,6 +53,17 @@ Resources:
                 - bedrock:InvokeModel
                 - bedrock:InvokeModelWithResponseStream
               Resource: !Sub 'arn:aws:bedrock:us-east-1::foundation-model/${ClaudeModelId}'
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/ai-chat-session-${Environment}'
+                - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/ai-chat-history-${Environment}'
       Events:
         ChatApi:
           Type: Api
@@ -58,6 +71,24 @@ Resources:
             RestApiId: !Ref ChatApi
             Path: /chat
             Method: post
+        SessionsApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChatApi
+            Path: /sessions
+            Method: get
+        SessionApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChatApi
+            Path: /sessions/{session_id}
+            Method: get
+        DeleteSessionApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ChatApi
+            Path: /sessions/{session_id}
+            Method: delete
 
   # S3 Bucket for Frontend
   FrontendBucket:

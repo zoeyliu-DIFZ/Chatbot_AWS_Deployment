@@ -46,7 +46,7 @@ def intent_recognizer(state, llm, store):
         "message_type": result.message_type,
         "next": next_agent,
         "messages": state["messages"],
-        "short_mem": {}
+        "short_mem": state.get("short_mem", {})  # Preserve existing short_mem
     }
 
 class MessageClassifier(BaseModel):

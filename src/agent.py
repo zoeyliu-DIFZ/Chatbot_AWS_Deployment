@@ -11,6 +11,7 @@ class ChatAgent:
     
     def __init__(self):
         self.graph = graph
+        self.session_threads = {}  # Store thread_id for each session
     
     def query(self, user_input: str, chat_history: List[Tuple[str, str]] = None) -> str:
         """Query the agent with user input using LangGraph workflow"""
@@ -23,7 +24,8 @@ class ChatAgent:
                 for role, content in chat_history:
                     if role == "human":
                         messages.append(HumanMessage(content=content))
-                    # Note: We'll only include human messages for now to keep it simple
+                    elif role == "assistant":
+                        messages.append(AIMessage(content=content))
             
             # Add current user input
             messages.append(HumanMessage(content=user_input))
@@ -77,7 +79,7 @@ class ChatAgent:
             traceback.print_exc()
             return f"Error processing request: {str(e)}"
     
-    def query_with_path(self, user_input: str, chat_history: List[Tuple[str, str]] = None) -> Tuple[str, dict]:
+    def query_with_path(self, user_input: str, chat_history: List[Tuple[str, str]] = None, session_id: str = None) -> Tuple[str, dict]:
         """Query the agent and return both response and workflow path information"""
         try:
             print(f"🔍 Processing query with path tracking: {user_input}")
@@ -88,6 +90,8 @@ class ChatAgent:
                 for role, content in chat_history:
                     if role == "human":
                         messages.append(HumanMessage(content=content))
+                    elif role == "assistant":
+                        messages.append(AIMessage(content=content))
             
             # Add current user input
             messages.append(HumanMessage(content=user_input))
@@ -107,8 +111,18 @@ class ChatAgent:
             
             print(f"🚀 Starting LangGraph workflow with path tracking...")
             
-            # Generate unique thread and checkpoint IDs
-            thread_id = str(uuid.uuid4())
+            # Use existing thread_id for session or create new one
+            if session_id and session_id in self.session_threads:
+                thread_id = self.session_threads[session_id]
+                print(f"🔄 Using existing thread_id for session {session_id}: {thread_id}")
+            else:
+                thread_id = str(uuid.uuid4())
+                if session_id:
+                    self.session_threads[session_id] = thread_id
+                    print(f"🆕 Created new thread_id for session {session_id}: {thread_id}")
+                else:
+                    print(f"🆕 Created new thread_id: {thread_id}")
+            
             checkpoint_id = str(uuid.uuid4())
             
             # Track the workflow path
